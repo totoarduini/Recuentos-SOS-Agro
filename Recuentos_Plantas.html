@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recuentos de Plantas</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --verde:#1E4A12;--verde2:#2f6b1f;--crema:#F2EDE2;--ambar:#C68A2E;
+  --bg:#F7F4EC;--card:#fff;--txt:#1f2a1a;--mut:#6b6f63;--brd:#ddd6c6;
+  --ok:#2e7d32;--warn:#d39a1b;--bad:#c0392b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:15px}
+header{background:var(--verde);color:var(--crema);padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:20px;margin:0;font-weight:600}
+header .sub{opacity:.75;font-size:13px}
+header .sp{flex:1}
+button{font-family:inherit;font-size:14px;border:1px solid var(--brd);background:#fff;color:var(--txt);padding:7px 12px;border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--verde)}
+button.pri{background:var(--ambar);border-color:var(--ambar);color:#fff;font-weight:600}
+button.pri:disabled{opacity:.45;cursor:not-allowed}
+header button{background:transparent;color:var(--crema);border-color:rgba(242,237,226,.4)}
+header button.pri{background:var(--ambar);border-color:var(--ambar)}
+.mode{font-size:12px;padding:3px 8px;border-radius:10px;background:rgba(242,237,226,.15)}
+nav{display:flex;gap:4px;padding:0 20px;background:var(--crema);border-bottom:1px solid var(--brd);overflow-x:auto}
+nav button{border:none;background:none;border-bottom:3px solid transparent;border-radius:0;padding:12px 14px;font-weight:500;color:var(--mut);white-space:nowrap}
+nav button.on{color:var(--verde);border-bottom-color:var(--ambar)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;padding:12px 20px;background:#fff;border-bottom:1px solid var(--brd);align-items:flex-end}
+.fl{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut);position:relative}
+.fl input[type=date]{font-family:inherit;font-size:14px;padding:6px;border:1px solid var(--brd);border-radius:6px}
+.ms-btn{min-width:120px;max-width:180px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-btn.act{border-color:var(--ambar);background:#fff8ec}
+.ms-pan{position:absolute;top:100%;left:0;z-index:30;background:#fff;border:1px solid var(--brd);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.12);padding:8px;min-width:220px;max-height:320px;overflow:auto;display:none}
+.ms-pan.open{display:block}
+.ms-pan label{display:flex;gap:6px;align-items:center;padding:3px 2px;font-size:14px;color:var(--txt);cursor:pointer}
+.ms-pan .acts{display:flex;gap:6px;margin-bottom:6px}
+.ms-pan .acts button{padding:3px 8px;font-size:12px}
+.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--txt);padding-bottom:7px}
+main{padding:16px 20px;max-width:1500px;margin:0 auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:12px 14px;border-left:5px solid var(--verde)}
+.kpi .l{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.kpi .v{font-size:28px;font-weight:600;font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.kpi .s{font-size:12px;color:var(--mut)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:14px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:16px;color:var(--verde);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card h3 .sp{flex:1}
+.ch{position:relative;height:340px}
+.tw{overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:6px 8px;border-bottom:1px solid #eee7d8;text-align:left;white-space:nowrap}
+th{background:var(--crema);color:var(--verde);font-weight:600;position:sticky;top:0;cursor:pointer;user-select:none}
+td.n,th.n{text-align:right;font-family:'IBM Plex Mono',monospace}
+tbody tr:hover{background:#faf6ec}
+tr.click{cursor:pointer}
+tr.pend td{color:var(--mut);font-style:italic}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.b-ok{background:var(--ok)}.b-warn{background:var(--warn)}.b-bad{background:var(--bad)}.b-na{background:#bbb}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:10px;background:var(--crema);color:var(--verde);margin-left:4px}
+.tag.old{background:#eee;color:#888}
+.tag.dirty{background:#fff1d6;color:#9a6512}
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 16px;font-size:14px}
+.info div span{display:block;font-size:11px;color:var(--mut);text-transform:uppercase}
+.dinp{width:52px;font-family:'IBM Plex Mono',monospace;font-size:13px;padding:3px;border:1px solid var(--brd);border-radius:4px;text-align:right}
+.dinp.chg{background:#fff1d6;border-color:var(--ambar)}
+select.inp,input.inp,textarea.inp{font-family:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--brd);border-radius:6px;width:100%}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:20px;max-width:760px;width:100%;max-height:90vh;overflow:auto}
+.modal h2{margin:0 0 14px;color:var(--verde);font-size:18px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.fgrid label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:3px}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--verde);color:var(--crema);padding:10px 18px;border-radius:8px;font-size:14px;z-index:60;display:none}
+.toast.err{background:var(--bad)}
+.leg{display:flex;gap:14px;font-size:13px;color:var(--mut);flex-wrap:wrap}
+.leg i{display:inline-block;width:14px;height:6px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.empty{padding:30px;text-align:center;color:var(--mut)}
+.hint{font-size:13px;color:var(--mut)}
+.strip text{font-family:'IBM Plex Mono',monospace;font-size:11px;fill:var(--mut)}
+@media (max-width:600px){.grid2{grid-template-columns:1fr}main{padding:12px}.filters,nav,header{padding-left:12px;padding-right:12px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Recuentos de Plantas · Maíz y Girasol</h1><div class="sub">SOS Agro · Implantación</div></div>
+  <span class="mode" id="modeTag">—</span>
+  <div class="sp"></div>
+  <span id="dirtyTag" class="sub"></span>
+  <button class="pri" id="btnSave" disabled>Guardar cambios</button>
+  <button id="btnReload">↻ Recargar</button>
+  <button id="btnCfg">⚙ Configuración</button>
+</header>
+<nav id="tabs">
+  <button data-t="resumen" class="on">Resumen</button>
+  <button data-t="comparar">Comparar</button>
+  <button data-t="tabla">Evaluaciones</button>
+  <button data-t="detalle">Detalle por surco</button>
+</nav>
+<div class="filters" id="filters"></div>
+<main id="main"><div class="empty">Cargando datos…</div></main>
+
+<div class="modal-bg" id="mdl"><div class="modal" id="mdlBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ================= Configuración ================= */
+const CFG_KEY='recuentos_plantas_cfg_v1';
+const DEF_CFG={
+  csvEval:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKq_0FKcob21-CoQ61CFwybBvBvi_VL6TpblKfOnnP62OQPMPuYKOjcPeORT7XuGProCBxnKqVvTz8/pub?gid=1204283095&single=true&output=csv',
+  csvSurc:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKq_0FKcob21-CoQ61CFwybBvBvi_VL6TpblKfOnnP62OQPMPuYKOjcPeORT7XuGProCBxnKqVvTz8/pub?gid=1718721655&single=true&output=csv',
+  script:'https://script.google.com/macros/s/AKfycbw6YZ95hm8c2BMHR-rvO3WaG9GlQYNUwOxVyVe5s6FNyZvov6zE5LAt3KeVuujE8LUNdQ/exec',clave:''
+};
+// Umbrales del semáforo
+const UMB={logro:[0.95,0.90],cv:[0.25,0.35],unif:[0.90,0.80]};
+let cfg=loadCfg();
+function loadCfg(){try{const c=Object.assign({},DEF_CFG,JSON.parse(localStorage.getItem(CFG_KEY)||'{}'));if(!c.script)c.script=DEF_CFG.script;return c}catch(e){return Object.assign({},DEF_CFG)}}
+function saveCfg(){try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg))}catch(e){}}
+
+/* ================= Utilidades ================= */
+const DK=Array.from({length:15},(_,i)=>'D'+String(i+1).padStart(2,'0'));
+const NUM_E=['Espaciamiento_cm','Densidad_siembra','Latitud','Longitud','Surcos_completos','Plantas_ha','Pct_logro','Dist_media','Desvio','CV','Pct_dobles','Pct_fallas','Uniformidad'];
+const NUM_S=['Surco','Dist_media','Plantas_ha','Desvio','CV','Pct_dobles','Pct_fallas','Uniformidad',...DK];
+const SHARED=['Fecha','Campania','Empresa','Campo','Lote','Cultivo','Ambiente']; // campos que se repiten en Surcos
+function num(v){if(v===null||v===undefined)return null;if(typeof v==='number')return isFinite(v)?v:null;const s=String(v).trim();if(s==='')return null;const n=parseFloat(s.replace(/\s/g,'').replace(',','.'));return isNaN(n)?null:n}
+function str(v){return v===null||v===undefined?'':String(v).trim()}
+function parseFecha(s){s=str(s);let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);return null}
+function fKey(e){const d=parseFecha(e.Fecha);return d?d.getTime():0}
+const nf0=new Intl.NumberFormat('es-AR',{maximumFractionDigits:0});
+const nf1=new Intl.NumberFormat('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1});
+function fN(v,d=0){if(v===null||v===undefined||isNaN(v))return '–';return d?new Intl.NumberFormat('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v):nf0.format(v)}
+function fP(v,d=1){if(v===null||v===undefined||isNaN(v))return '–';return new Intl.NumberFormat('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v*100)+'%'}
+function esc(s){return str(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function mean(a){const b=a.filter(x=>x!==null&&!isNaN(x));return b.length?b.reduce((s,x)=>s+x,0)/b.length:null}
+function cls(v,[g,y],inv){if(v===null||v===undefined)return 'b-na';if(!inv)return v>=g?'b-ok':v>=y?'b-warn':'b-bad';return v<=g?'b-ok':v<=y?'b-warn':'b-bad'}
+function toast(msg,err){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'');t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',err?6000:3000)}
+function lbl(e){return `${e.Lote||'?'} · ${e.Ambiente||'s/amb.'}`}
+function lblF(e){return `${lbl(e)} · ${e.Fecha}`}
+
+/* ================= Cálculos (misma lógica que la app) ================= */
+// D01..D15 = posición acumulada de cada planta (cm). Espaciamiento entre plantas = diferencia.
+// Dobles: espaciamiento < 0,5 × teórico; Fallas: > 1,5 × teórico (teórico según densidad de siembra).
+function calcSurco(s,esp,dens){
+  const pos=DK.map(k=>num(s[k])).filter(v=>v!==null);
+  const n=pos.length;
+  const R={Dist_media:null,Plantas_ha:null,Desvio:null,CV:null,Pct_dobles:null,Pct_fallas:null,Uniformidad:null};
+  if(n&&esp){
+    const sp=pos.map((p,i)=>p-(i?pos[i-1]:0));
+    const media=pos[n-1]/n;
+    const sd=n>1?Math.sqrt(sp.reduce((a,x)=>a+(x-media)**2,0)/(n-1)):0;
+    const teo=dens?1e8/(esp*dens):media;
+    const dob=sp.filter(x=>x<0.5*teo).length/n, fal=sp.filter(x=>x>1.5*teo).length/n;
+    Object.assign(R,{Dist_media:media,Plantas_ha:media?1e8/(esp*media):null,Desvio:sd,CV:media?sd/media:null,Pct_dobles:dob,Pct_fallas:fal,Uniformidad:1-dob-fal});
+  }
+  Object.assign(s,R);return s;
+}
+function calcEval(e){
+  const ss=surcosDe(e.ID_Evaluacion).filter(s=>s.Plantas_ha!==null);
+  const ok=ss.filter(s=>!str(s.Estado)||str(s.Estado).toUpperCase()==='OK');
+  e.Surcos_completos=ok.length;
+  for(const k of ['Plantas_ha','Dist_media','Desvio','CV','Pct_dobles','Pct_fallas','Uniformidad'])e[k]=mean(ss.map(s=>s[k]));
+  e.Pct_logro=e.Plantas_ha!==null&&e.Densidad_siembra?e.Plantas_ha/e.Densidad_siembra:null;
+}
+function spacings(s){const pos=DK.map(k=>num(s[k])).filter(v=>v!==null);return pos.map((p,i)=>({p,sp:p-(i?pos[i-1]:0)}))}
+
+/* ================= Estado ================= */
+let HE=[],HS=[],E=[],S=[],byId={};
+const dirtyE=new Set(),dirtyS=new Set();
+let tab='resumen',detId=null,sortT={k:'Fecha',d:-1},selCmp=new Set();
+const FILT=[['Campania','Campaña'],['Empresa','Empresa'],['Campo','Campo'],['Lote','Lote'],['Cultivo','Cultivo'],['Ambiente','Ambiente'],['Tecnico','Técnico'],['Genetica','Genética'],['Antecesor','Antecesor'],['Contratista','Contratista'],['Sembradora','Sembradora']];
+const F={};FILT.forEach(([k])=>F[k]=null); // null = todos
+let fDesde='',fHasta='',soloUltima=true;
+
+function surcosDe(id){return S.filter(s=>s.ID_Evaluacion===id).sort((a,b)=>(a.Surco||0)-(b.Surco||0))}
+function normRows(headers,rows,numCols){
+  return rows.map(r=>{const o={};headers.forEach((h,i)=>{const v=r[i];o[h]=numCols.includes(h)?num(v):str(v)});return o}).filter(o=>o.ID_Evaluacion);
+}
+function marcarUltimas(){
+  // última evaluación con surcos por empresa/campo/lote/cultivo/ambiente
+  const key=e=>[e.Empresa,e.Campo,e.Lote,e.Cultivo,e.Ambiente].join('|');
+  for(const e of E){e._ult=false;e._sup=false}
+  const g2={};
+  for(const e of E){if(!e.Plantas_ha)continue;const k=key(e);
+    if(!g2[k]||fKey(e)>fKey(g2[k])||(fKey(e)===fKey(g2[k])&&str(e.Actualizado)>str(g2[k].Actualizado)))g2[k]=e}
+  Object.values(g2).forEach(e=>e._ult=true);
+  // pendientes (sin surcos) que ya tienen una evaluación posterior con datos
+  for(const e of E){if(e.Plantas_ha)continue;const u=g2[key(e)];if(u&&fKey(u)>=fKey(e))e._sup=true}
+}
+
+/* ================= Carga ================= */
+async function cargar(){
+  document.getElementById('main').innerHTML='<div class="empty">Cargando datos…</div>';
+  try{
+    if(cfg.script){
+      const r=await fetch(cfg.script+(cfg.script.includes('?')?'&':'?')+'action=read&clave='+encodeURIComponent(cfg.clave||'')+'&_='+Date.now());
+      const j=await r.json();if(!j.ok)throw new Error(j.error||'Error del script');
+      HE=j.eval.headers;HS=j.surcos.headers;
+      E=normRows(HE,j.eval.rows,NUM_E);S=normRows(HS,j.surcos.rows,NUM_S);
+    }else{
+      const [a,b]=await Promise.all([csv(cfg.csvEval),csv(cfg.csvSurc)]);
+      HE=a[0];HS=b[0];E=normRows(HE,a.slice(1),NUM_E);S=normRows(HS,b.slice(1),NUM_S);
+    }
+    dirtyE.clear();dirtyS.clear();
+    marcarUltimas();idx();
+    document.getElementById('modeTag').textContent=cfg.script?'● Conectado a la planilla (edición)':'○ Solo lectura (CSV publicado)';
+    renderFiltros();render();updDirty();
+  }catch(err){
+    console.error(err);
+    document.getElementById('main').innerHTML=`<div class="empty">No se pudieron cargar los datos.<br><span class="hint">${esc(err.message)}</span><br><br><button onclick="abrirCfg()">Revisar configuración</button></div>`;
+  }
+}
+function idx(){byId={};E.forEach(e=>byId[e.ID_Evaluacion]=e)}
+function csv(url){return new Promise((res,rej)=>Papa.parse(url+(url.includes('?')?'&':'?')+'_='+Date.now(),{download:true,skipEmptyLines:true,complete:r=>res(r.data),error:e=>rej(new Error('CSV: '+(e.message||e)))}))}
+
+/* ================= Filtros ================= */
+function pasa(e,skip){
+  for(const [k] of FILT){if(k===skip)continue;if(F[k]&&!F[k].has(e[k]||'(vacío)'))return false}
+  const t=fKey(e);
+  if(fDesde&&t<new Date(fDesde+'T00:00').getTime())return false;
+  if(fHasta&&t>new Date(fHasta+'T00:00').getTime())return false;
+  return true;
+}
+function filtradas(){return E.filter(e=>pasa(e)&&(!soloUltima||e._ult||(!e.Plantas_ha&&!e._sup)))}
+function conDatos(arr){return arr.filter(e=>e.Plantas_ha!==null)}
+function renderFiltros(){
+  const box=document.getElementById('filters');
+  box.innerHTML=FILT.map(([k,l])=>`<div class="fl">${l}<button class="ms-btn" data-k="${k}"></button><div class="ms-pan" data-k="${k}"></div></div>`).join('')+
+  `<div class="fl">Desde<input type="date" id="fDesde" value="${fDesde}"></div><div class="fl">Hasta<input type="date" id="fHasta" value="${fHasta}"></div>
+   <label class="chk"><input type="checkbox" id="soloUlt" ${soloUltima?'checked':''}> Solo última evaluación por lote/ambiente</label>
+   <button id="fClear" style="margin-bottom:1px">Limpiar filtros</button>`;
+  box.querySelectorAll('.ms-btn').forEach(b=>b.onclick=ev=>{ev.stopPropagation();const p=box.querySelector(`.ms-pan[data-k="${b.dataset.k}"]`);const was=p.classList.contains('open');box.querySelectorAll('.ms-pan').forEach(x=>x.classList.remove('open'));if(!was){llenarPan(b.dataset.k);p.classList.add('open')}});
+  box.querySelector('#fDesde').onchange=e=>{fDesde=e.target.value;render()};
+  box.querySelector('#fHasta').onchange=e=>{fHasta=e.target.value;render()};
+  box.querySelector('#soloUlt').onchange=e=>{soloUltima=e.target.checked;render()};
+  box.querySelector('#fClear').onclick=()=>{FILT.forEach(([k])=>F[k]=null);fDesde=fHasta='';renderFiltros();render()};
+  updBtns();
+}
+function opciones(k){return [...new Set(E.filter(e=>pasa(e,k)).map(e=>e[k]||'(vacío)'))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true}))}
+function llenarPan(k){
+  const p=document.querySelector(`.ms-pan[data-k="${k}"]`);const ops=opciones(k);
+  p.innerHTML=`<div class="acts"><button data-a="all">Todos</button><button data-a="none">Ninguno</button></div>`+ops.map(o=>`<label><input type="checkbox" value="${esc(o)}" ${!F[k]||F[k].has(o)?'checked':''}> ${esc(o)}</label>`).join('');
+  p.onclick=ev=>ev.stopPropagation();
+  p.querySelectorAll('.acts button').forEach(b=>b.onclick=()=>{F[k]=b.dataset.a==='all'?null:new Set();llenarPan(k);updBtns();render()});
+  p.querySelectorAll('input').forEach(i=>i.onchange=()=>{const sel=[...p.querySelectorAll('input:checked')].map(x=>x.value);F[k]=sel.length===ops.length?null:new Set(sel);updBtns();render()});
+}
+function updBtns(){document.querySelectorAll('.ms-btn').forEach(b=>{const k=b.dataset.k;const s=F[k];b.textContent=!s?'Todos':s.size===1?[...s][0]:s.size===0?'Ninguno':s.size+' selec.';b.classList.toggle('act',!!s)})}
+document.addEventListener('click',()=>document.querySelectorAll('.ms-pan').forEach(x=>x.classList.remove('open')));
+
+/* ================= Render ================= */
+const charts={};
+function chart(id,cfgC){if(charts[id])charts[id].destroy();const el=document.getElementById(id);if(!el)return;charts[id]=new Chart(el,cfgC)}
+Chart.defaults.font.family="'IBM Plex Sans',sans-serif";Chart.defaults.font.size=14;Chart.defaults.color='#1f2a1a';
+Chart.defaults.plugins.legend.labels.boxWidth=14;
+function render(){
+  Object.values(charts).forEach(c=>c.destroy());for(const k in charts)delete charts[k];
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+  ({resumen:rResumen,comparar:rComparar,tabla:rTabla,detalle:rDetalle})[tab]();
+}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()});
+
+function kpis(arr){
+  const d=conDatos(arr);
+  const k=(l,v,s,c)=>`<div class="kpi" ${c?`style="border-left-color:${c}"`:''}><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s||''}</div></div>`;
+  const lg=mean(d.map(e=>e.Pct_logro)),cv=mean(d.map(e=>e.CV)),un=mean(d.map(e=>e.Uniformidad));
+  const col=c=>({'b-ok':'var(--ok)','b-warn':'var(--warn)','b-bad':'var(--bad)','b-na':'#bbb'})[c];
+  return `<div class="kpis">
+   ${k('Evaluaciones',d.length,`${arr.length-d.length} sin surcos cargados`)}
+   ${k('Lotes',new Set(d.map(e=>e.Empresa+'|'+e.Lote)).size,`${new Set(d.map(e=>e.Empresa)).size} empresas`)}
+   ${k('Plantas/ha',fN(mean(d.map(e=>e.Plantas_ha))),'obj. '+fN(mean(d.map(e=>e.Densidad_siembra))))}
+   ${k('% Logro',fP(lg),'plantas / densidad obj.',col(cls(lg,UMB.logro)))}
+   ${k('CV distancia',fP(cv),'menor es mejor',col(cls(cv,UMB.cv,true)))}
+   ${k('Uniformidad',fP(un),'1 − dobles − fallas',col(cls(un,UMB.unif)))}
+   ${k('% Dobles',fP(mean(d.map(e=>e.Pct_dobles))))}
+   ${k('% Fallas',fP(mean(d.map(e=>e.Pct_fallas))))}
+  </div>`;
+}
+function rResumen(){
+  const arr=filtradas(),d=conDatos(arr).sort((a,b)=>(a.Empresa+a.Lote+a.Ambiente).localeCompare(b.Empresa+b.Lote+b.Ambiente,'es',{numeric:true}));
+  const m=document.getElementById('main');
+  if(!arr.length){m.innerHTML='<div class="empty">No hay evaluaciones con estos filtros.</div>';return}
+  m.innerHTML=kpis(arr)+`
+  <div class="card"><h3>Plantas logradas vs densidad objetivo</h3><div class="ch" style="height:${Math.max(340,d.length*0)}px"><canvas id="c1"></canvas></div></div>
+  <div class="grid2">
+   <div class="card"><h3>% Logro vs CV de distancia</h3><div class="ch"><canvas id="c2"></canvas></div><div class="hint">Arriba a la izquierda: buen logro y distribución pareja.</div></div>
+   <div class="card"><h3>Dobles y fallas por evaluación</h3><div class="ch"><canvas id="c3"></canvas></div></div>
+  </div>
+  <div class="card"><h3>Evaluaciones <span class="sp"></span><span class="hint">Click en una fila para ver el detalle por surco</span></h3><div class="tw">${tablaEval(arr,false)}</div></div>`;
+  const labels=d.map(e=>`${e.Empresa} ${lbl(e)}`);
+  chart('c1',{type:'bar',data:{labels,datasets:[
+    {label:'Densidad objetivo',data:d.map(e=>e.Densidad_siembra),backgroundColor:'#d9cfb8'},
+    {label:'Plantas/ha logradas',data:d.map(e=>e.Plantas_ha),backgroundColor:d.map(e=>({'b-ok':'#2e7d32','b-warn':'#d39a1b','b-bad':'#c0392b','b-na':'#999'})[cls(e.Pct_logro,UMB.logro)])}]},
+    options:{maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fN(c.raw)}`,afterBody:it=>{const e=d[it[0].dataIndex];return `Logro ${fP(e.Pct_logro)} · CV ${fP(e.CV)} · ${e.Fecha}`}}}},
+    scales:{x:{ticks:{maxRotation:60,minRotation:45,font:{size:12}}},y:{ticks:{callback:v=>fN(v)}}},onClick:(ev,el)=>{if(el.length){detId=d[el[0].index].ID_Evaluacion;tab='detalle';render()}}}});
+  const cults=[...new Set(d.map(e=>e.Cultivo))],pal=['#1E4A12','#C68A2E','#5b8bd0','#8e44ad'];
+  chart('c2',{type:'scatter',data:{datasets:cults.map((c,i)=>({label:c,data:d.filter(e=>e.Cultivo===c).map(e=>({x:e.CV*100,y:e.Pct_logro*100,e})),backgroundColor:pal[i%4],pointRadius:7,pointHoverRadius:9}))},
+    options:{maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>`${c.raw.e.Empresa} ${lbl(c.raw.e)}: logro ${fN(c.raw.y,1)}% · CV ${fN(c.raw.x,1)}%`}}},
+    scales:{x:{title:{display:true,text:'CV distancia (%)'}},y:{title:{display:true,text:'% Logro'}}},onClick:(ev,el)=>{if(el.length){const p=charts.c2.data.datasets[el[0].datasetIndex].data[el[0].index];detId=p.e.ID_Evaluacion;tab='detalle';render()}}}});
+  chart('c3',{type:'bar',data:{labels,datasets:[{label:'% Dobles',data:d.map(e=>e.Pct_dobles*100),backgroundColor:'#C68A2E'},{label:'% Fallas',data:d.map(e=>e.Pct_fallas*100),backgroundColor:'#c0392b'}]},
+    options:{maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fN(c.raw,1)}%`}}},scales:{x:{stacked:true,ticks:{maxRotation:60,minRotation:45,font:{size:11}}},y:{stacked:true,ticks:{callback:v=>v+'%'}}}}});
+  bindTabla();
+}
+
+const COLS=[['Fecha','Fecha'],['Empresa','Empresa'],['Campo','Campo'],['Lote','Lote'],['Ambiente','Amb.'],['Cultivo','Cultivo'],['Genetica','Genética'],['Antecesor','Antecesor'],['Tecnico','Técnico'],['Contratista','Contratista'],['Espaciamiento_cm','Esp. cm','n',1],['Densidad_siembra','Dens. obj.','n'],['Plantas_ha','Pl/ha','n'],['Pct_logro','Logro','p'],['CV','CV','p'],['Pct_dobles','Dobles','p'],['Pct_fallas','Fallas','p'],['Uniformidad','Unif.','p'],['Surcos_completos','Surcos','n']];
+function tablaEval(arr,conChk){
+  const k=sortT.k,dd=sortT.d;
+  const rows=[...arr].sort((a,b)=>{let x=a[k],y=b[k];if(k==='Fecha'){x=fKey(a);y=fKey(b)}if(x===null||x==='')return 1;if(y===null||y==='')return -1;return (typeof x==='number'?x-y:String(x).localeCompare(String(y),'es',{numeric:true}))*dd});
+  return `<table><thead><tr>${conChk?'<th title="Seleccionar para comparar">✓</th>':''}<th></th>${COLS.map(([c,l,t])=>`<th class="${t?'n':''}" data-s="${c}">${l}${k===c?(dd>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
+  ${rows.map(e=>{const pend=e.Plantas_ha===null;const sem=pend?'b-na':[cls(e.Pct_logro,UMB.logro),cls(e.CV,UMB.cv,true),cls(e.Uniformidad,UMB.unif)].sort((a,b)=>['b-bad','b-warn','b-ok'].indexOf(a)-['b-bad','b-warn','b-ok'].indexOf(b))[0];
+   return `<tr class="click ${pend?'pend':''}" data-id="${e.ID_Evaluacion}">${conChk?`<td><input type="checkbox" class="cmpchk" data-id="${e.ID_Evaluacion}" ${selCmp.has(e.ID_Evaluacion)?'checked':''} ${pend?'disabled':''}></td>`:''}<td><span class="dot ${sem}"></span>${dirtyE.has(e.ID_Evaluacion)?'<span class="tag dirty">editada</span>':''}${!e._ult&&!pend?'<span class="tag old">anterior</span>':''}</td>
+   ${COLS.map(([c,l,t,dec])=>`<td class="${t?'n':''}">${t==='p'?`<span class="dot ${c==='Pct_logro'?cls(e[c],UMB.logro):c==='CV'?cls(e[c],UMB.cv,true):c==='Uniformidad'?cls(e[c],UMB.unif):''}" style="${['Pct_logro','CV','Uniformidad'].includes(c)?'':'display:none'}"></span>${fP(e[c])}`:t==='n'?fN(e[c],dec||0):esc(e[c])}</td>`).join('')}</tr>`}).join('')}
+  </tbody></table>`;
+}
+function bindTabla(){
+  document.querySelectorAll('th[data-s]').forEach(th=>th.onclick=()=>{const k=th.dataset.s;sortT=sortT.k===k?{k,d:-sortT.d}:{k,d:1};render()});
+  document.querySelectorAll('tr.click').forEach(tr=>tr.onclick=ev=>{if(ev.target.classList.contains('cmpchk'))return;detId=tr.dataset.id;tab='detalle';render()});
+  document.querySelectorAll('.cmpchk').forEach(c=>c.onchange=()=>{c.checked?selCmp.add(c.dataset.id):selCmp.delete(c.dataset.id);const b=document.getElementById('nSel');if(b)b.textContent=selCmp.size});
+}
+function rTabla(){
+  const arr=filtradas();
+  document.getElementById('main').innerHTML=`<div class="card"><h3>Evaluaciones (${arr.length}) <span class="sp"></span><span class="hint">Tildá para comparar (<b id="nSel">${selCmp.size}</b>)</span><button onclick="tab='comparar';render()">Comparar seleccionadas →</button></h3>
+  <div class="hint" style="margin-bottom:8px">Semáforo: logro ≥ ${UMB.logro[0]*100}% / ≥ ${UMB.logro[1]*100}% · CV ≤ ${UMB.cv[0]*100}% / ≤ ${UMB.cv[1]*100}% · uniformidad ≥ ${UMB.unif[0]*100}% / ≥ ${UMB.unif[1]*100}%. Toma el peor de los tres.</div>
+  <div class="tw">${tablaEval(arr,true)}</div></div>`;
+  bindTabla();
+}
+
+/* ---------- Comparar ---------- */
+const DIMS=[['Lote','Lote'],['LoteAmb','Lote + ambiente'],['Ambiente','Ambiente'],['Empresa','Empresa'],['Campo','Campo'],['Genetica','Genética'],['Antecesor','Antecesor'],['Contratista','Contratista'],['Sembradora','Sembradora'],['Tecnico','Técnico'],['Cultivo','Cultivo'],['Espaciamiento_cm','Espaciamiento']];
+const MET=[['Plantas_ha','Plantas/ha','n'],['Pct_logro','% Logro','p'],['CV','CV distancia','p'],['Uniformidad','Uniformidad','p'],['Pct_dobles','% Dobles','p'],['Pct_fallas','% Fallas','p'],['Desvio','Desvío (cm)','n1'],['Dist_media','Dist. media (cm)','n1']];
+let cmpDim='LoteAmb',cmpMet='Pct_logro';
+function dimVal(e,d){if(d==='LoteAmb')return `${e.Empresa} ${lbl(e)}`;if(d==='Lote')return `${e.Empresa} ${e.Lote}`;const v=e[d];return v===null||v===''?'(vacío)':String(v)}
+function fmtM(v,t){return t==='p'?fP(v):t==='n1'?fN(v,1):fN(v)}
+function rComparar(){
+  const d=conDatos(filtradas());
+  const g={};d.forEach(e=>{const k=dimVal(e,cmpDim);(g[k]=g[k]||[]).push(e)});
+  const met=MET.find(m=>m[0]===cmpMet);
+  const rows=Object.entries(g).map(([k,a])=>{const o={k,n:a.length,dens:mean(a.map(e=>e.Densidad_siembra))};MET.forEach(([m])=>o[m]=mean(a.map(e=>e[m])));return o})
+    .sort((a,b)=>(b[cmpMet]??-1)-(a[cmpMet]??-1));
+  const sel=[...selCmp].map(id=>byId[id]).filter(Boolean);
+  document.getElementById('main').innerHTML=`
+  <div class="card"><h3>Comparar por
+    <select class="inp" style="width:auto" id="cDim">${DIMS.map(([k,l])=>`<option value="${k}" ${k===cmpDim?'selected':''}>${l}</option>`).join('')}</select>
+    <span>métrica</span>
+    <select class="inp" style="width:auto" id="cMet">${MET.map(([k,l])=>`<option value="${k}" ${k===cmpMet?'selected':''}>${l}</option>`).join('')}</select>
+    <span class="sp"></span><span class="hint">Promedio de evaluaciones filtradas</span></h3>
+    <div class="ch" style="height:${Math.max(320,rows.length*30+60)}px"><canvas id="cc1"></canvas></div></div>
+  <div class="card"><h3>Tabla comparativa</h3><div class="tw"><table><thead><tr><th>${DIMS.find(x=>x[0]===cmpDim)[1]}</th><th class="n">Eval.</th><th class="n">Dens. obj.</th>${MET.map(m=>`<th class="n">${m[1]}</th>`).join('')}</tr></thead><tbody>
+   ${rows.map(r=>`<tr><td>${esc(r.k)}</td><td class="n">${r.n}</td><td class="n">${fN(r.dens)}</td>${MET.map(([m,,t])=>`<td class="n">${m==='Pct_logro'?`<span class="dot ${cls(r[m],UMB.logro)}"></span>`:m==='CV'?`<span class="dot ${cls(r[m],UMB.cv,true)}"></span>`:m==='Uniformidad'?`<span class="dot ${cls(r[m],UMB.unif)}"></span>`:''}${fmtM(r[m],t)}</td>`).join('')}</tr>`).join('')}
+  </tbody></table></div></div>
+  <div class="card"><h3>Evaluaciones seleccionadas (${sel.length}) <span class="sp"></span>${sel.length?'<button id="clrSel">Limpiar selección</button>':''}</h3>
+   ${sel.length<2?`<div class="hint">Tildá 2 o más evaluaciones en la pestaña <b>Evaluaciones</b> para compararlas surco por surco.</div>`:
+   `<div class="ch"><canvas id="cc2"></canvas></div><div class="tw" style="margin-top:12px"><table><thead><tr><th>Evaluación</th><th>Genética</th><th class="n">Dens. obj.</th>${MET.map(m=>`<th class="n">${m[1]}</th>`).join('')}</tr></thead><tbody>
+   ${sel.map(e=>`<tr class="click" data-id="${e.ID_Evaluacion}"><td>${esc(e.Empresa)} ${esc(lblF(e))}</td><td>${esc(e.Genetica)}</td><td class="n">${fN(e.Densidad_siembra)}</td>${MET.map(([m,,t])=>`<td class="n">${fmtM(e[m],t)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
+  </div>`;
+  document.getElementById('cDim').onchange=e=>{cmpDim=e.target.value;render()};
+  document.getElementById('cMet').onchange=e=>{cmpMet=e.target.value;render()};
+  const c=document.getElementById('clrSel');if(c)c.onclick=()=>{selCmp.clear();render()};
+  document.querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>{detId=tr.dataset.id;tab='detalle';render()});
+  const isP=met[2]==='p';
+  const ds=[{label:met[1],data:rows.map(r=>isP?r[cmpMet]*100:r[cmpMet]),backgroundColor:rows.map(r=>cmpMet==='Pct_logro'?colC(cls(r[cmpMet],UMB.logro)):cmpMet==='CV'?colC(cls(r[cmpMet],UMB.cv,true)):cmpMet==='Uniformidad'?colC(cls(r[cmpMet],UMB.unif)):'#1E4A12')}];
+  if(cmpMet==='Plantas_ha')ds.unshift({label:'Densidad objetivo',data:rows.map(r=>r.dens),backgroundColor:'#d9cfb8'});
+  chart('cc1',{type:'bar',data:{labels:rows.map(r=>r.k),datasets:ds},options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:cmpMet==='Plantas_ha'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${isP?fN(c.raw,1)+'%':fN(c.raw,met[2]==='n1'?1:0)}`}}},scales:{x:{ticks:{callback:v=>isP?v+'%':fN(v)}},y:{ticks:{font:{size:13}}}}}});
+  if(sel.length>=2){
+    const maxS=Math.max(...sel.map(e=>surcosDe(e.ID_Evaluacion).length));
+    const pal=['#1E4A12','#C68A2E','#5b8bd0','#8e44ad','#c0392b','#16a085','#7f8c8d','#d35400'];
+    chart('cc2',{type:'bar',data:{labels:Array.from({length:maxS},(_,i)=>'Surco '+(i+1)),datasets:sel.map((e,i)=>({label:`${e.Empresa} ${lbl(e)}`,data:surcosDe(e.ID_Evaluacion).map(s=>s.Plantas_ha),backgroundColor:pal[i%8]}))},
+      options:{maintainAspectRatio:false,plugins:{title:{display:true,text:'Plantas/ha por surco'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fN(c.raw)}`}}},scales:{y:{ticks:{callback:v=>fN(v)}}}}});
+  }
+}
+function colC(c){return({'b-ok':'#2e7d32','b-warn':'#d39a1b','b-bad':'#c0392b','b-na':'#999'})[c]}
+
+/* ---------- Detalle ---------- */
+function rDetalle(){
+  const arr=filtradas().sort((a,b)=>(a.Empresa+a.Lote+a.Ambiente).localeCompare(b.Empresa+b.Lote+b.Ambiente,'es',{numeric:true})||fKey(b)-fKey(a));
+  if(!detId||!byId[detId])detId=(arr[0]||E[0]||{}).ID_Evaluacion;
+  const e=byId[detId];const m=document.getElementById('main');
+  if(!e){m.innerHTML='<div class="empty">No hay evaluaciones.</div>';return}
+  const opts=[...arr];if(!arr.includes(e))opts.unshift(e);
+  const ss=surcosDe(e.ID_Evaluacion);
+  const teo=e.Espaciamiento_cm&&e.Densidad_siembra?1e8/(e.Espaciamiento_cm*e.Densidad_siembra):null;
+  m.innerHTML=`
+  <div class="card"><h3>Evaluación
+    <select class="inp" style="width:auto;max-width:100%" id="dSel">${opts.map(x=>`<option value="${x.ID_Evaluacion}" ${x===e?'selected':''}>${esc(x.Empresa)} · ${esc(lblF(x))}${x.Plantas_ha===null?' (sin surcos)':''}</option>`).join('')}</select>
+    <span class="sp"></span><button id="btnEdit">✎ Editar datos del lote</button></h3>
+    <div class="info">
+     ${[['Empresa',e.Empresa],['Campo',e.Campo],['Lote',e.Lote],['Ambiente',e.Ambiente||'–'],['Cultivo',e.Cultivo],['Genética',e.Genetica||'–'],['Fecha',e.Fecha],['Campaña',e.Campania],['Técnico',e.Tecnico||'–'],['Est. fenológico',e.Estado_fenologico||'–'],['Antecesor',e.Antecesor||'–'],['Contratista',e.Contratista||'–'],['Sembradora',e.Sembradora||'–'],['Espaciamiento',e.Espaciamiento_cm?fN(e.Espaciamiento_cm,1)+' cm':'–'],['Densidad objetivo',fN(e.Densidad_siembra)+' pl/ha'],['Dist. teórica',teo?fN(teo,1)+' cm':'–']].map(([l,v])=>`<div><span>${l}</span>${esc(v)}</div>`).join('')}
+     ${e.Observaciones?`<div style="grid-column:1/-1"><span>Observaciones</span>${esc(e.Observaciones)}</div>`:''}
+    </div></div>
+  ${kpiDet(e)}
+  ${ss.length?`
+  <div class="card"><h3>Distribución de plantas en el surco <span class="sp"></span>
+    <span class="leg"><span><i style="background:#1E4A12"></i>normal</span><span><i style="background:#C68A2E"></i>doble (&lt; ${teo?fN(teo*0.5,1):'0,5×'} cm)</span><span><i style="background:#c0392b"></i>falla (&gt; ${teo?fN(teo*1.5,1):'1,5×'} cm)</span></span></h3>
+    ${strip(ss,teo)}</div>
+  <div class="card"><h3>Mediciones por surco <span class="sp"></span><span class="hint">Posición acumulada de cada planta (cm). Al cambiar un valor se recalcula todo.</span></h3>
+    <div class="tw"><table><thead><tr><th>Surco</th>${DK.map(k=>`<th class="n">${k}</th>`).join('')}<th>Estado</th><th class="n">Dist. media</th><th class="n">Pl/ha</th><th class="n">CV</th><th class="n">Dobles</th><th class="n">Fallas</th><th class="n">Unif.</th></tr></thead><tbody>
+    ${ss.map(s=>`<tr><td><b>${s.Surco}</b>${dirtyS.has(e.ID_Evaluacion+'|'+s.Surco)?' <span class="tag dirty">●</span>':''}</td>${DK.map(k=>`<td><input class="dinp ${s['_o'+k]!==undefined?'chg':''}" data-s="${s.Surco}" data-k="${k}" value="${s[k]===null?'':String(s[k]).replace('.',',')}" inputmode="decimal"></td>`).join('')}
+     <td><input class="dinp" style="width:44px;text-align:left" data-s="${s.Surco}" data-k="Estado" value="${esc(s.Estado)}"></td>
+     <td class="n">${fN(s.Dist_media,1)}</td><td class="n">${fN(s.Plantas_ha)}</td><td class="n"><span class="dot ${cls(s.CV,UMB.cv,true)}"></span>${fP(s.CV)}</td><td class="n">${fP(s.Pct_dobles)}</td><td class="n">${fP(s.Pct_fallas)}</td><td class="n"><span class="dot ${cls(s.Uniformidad,UMB.unif)}"></span>${fP(s.Uniformidad)}</td></tr>`).join('')}
+    </tbody></table></div></div>
+  <div class="grid2"><div class="card"><h3>Plantas/ha por surco</h3><div class="ch" style="height:280px"><canvas id="dc1"></canvas></div></div>
+   <div class="card"><h3>Distancias entre plantas (histograma)</h3><div class="ch" style="height:280px"><canvas id="dc2"></canvas></div></div></div>`
+  :`<div class="card"><div class="empty">Esta evaluación no tiene surcos cargados en la hoja Surcos.</div></div>`}`;
+  document.getElementById('dSel').onchange=ev=>{detId=ev.target.value;render()};
+  document.getElementById('btnEdit').onclick=()=>editEval(e);
+  document.querySelectorAll('.dinp').forEach(inp=>inp.onchange=()=>{
+    const s=ss.find(x=>String(x.Surco)===inp.dataset.s);const k=inp.dataset.k;
+    if(k==='Estado'){s.Estado=inp.value.trim()}
+    else{const v=num(inp.value);if(inp.value.trim()!==''&&v===null){toast('Valor no numérico',true);inp.value=s[k]??'';return}
+      if(!('_o'+k in s))s['_o'+k]=s[k];s[k]=v;}
+    calcSurco(s,e.Espaciamiento_cm,e.Densidad_siembra);calcEval(e);
+    dirtyS.add(e.ID_Evaluacion+'|'+s.Surco);dirtyE.add(e.ID_Evaluacion);marcarUltimas();updDirty();
+    // avisar si las posiciones no son crecientes
+    const pos=DK.map(x=>num(s[x])).filter(x=>x!==null);if(pos.some((p,i)=>i&&p<=pos[i-1]))toast(`Surco ${s.Surco}: las posiciones deberían ser crecientes`,true);
+    render();
+  });
+  if(ss.length){
+    const pal=ss.map(s=>colC(cls(s.Plantas_ha&&e.Densidad_siembra?s.Plantas_ha/e.Densidad_siembra:null,UMB.logro)));
+    chart('dc1',{type:'bar',data:{labels:ss.map(s=>'S'+s.Surco),datasets:[{label:'Plantas/ha',data:ss.map(s=>s.Plantas_ha),backgroundColor:pal},{type:'line',label:'Objetivo',data:ss.map(()=>e.Densidad_siembra),borderColor:'#C68A2E',borderDash:[6,4],pointRadius:0}]},
+      options:{maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fN(c.raw)}`}}},scales:{y:{beginAtZero:false,ticks:{callback:v=>fN(v)}}}}});
+    const all=ss.flatMap(s=>spacings(s).map(x=>x.sp));const step=5,mx=Math.ceil(Math.max(...all,1)/step)*step;
+    const bins=Array.from({length:mx/step},(_,i)=>i*step);
+    chart('dc2',{type:'bar',data:{labels:bins.map(b=>`${b}-${b+step}`),datasets:[{label:'Cantidad',data:bins.map(b=>all.filter(x=>x>=b&&x<b+step).length),backgroundColor:bins.map(b=>teo&&b+step<=teo*0.5?'#C68A2E':teo&&b>=teo*1.5?'#c0392b':'#1E4A12')}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'cm entre plantas'},ticks:{font:{size:11}}}}}});
+  }
+}
+function kpiDet(e){
+  const k=(l,v,c)=>`<div class="kpi" style="border-left-color:${c||'var(--verde)'}"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+  return `<div class="kpis">${k('Plantas/ha',fN(e.Plantas_ha))}${k('% Logro',fP(e.Pct_logro),colC(cls(e.Pct_logro,UMB.logro)))}${k('Dist. media',fN(e.Dist_media,1)+' cm')}${k('Desvío',fN(e.Desvio,1)+' cm')}${k('CV',fP(e.CV),colC(cls(e.CV,UMB.cv,true)))}${k('% Dobles',fP(e.Pct_dobles))}${k('% Fallas',fP(e.Pct_fallas))}${k('Uniformidad',fP(e.Uniformidad),colC(cls(e.Uniformidad,UMB.unif)))}</div>`;
+}
+function strip(ss,teo){
+  const mx=Math.max(...ss.map(s=>Math.max(0,...DK.map(k=>num(s[k])||0))))+10;
+  const W=1000,L=40,rh=34,H=ss.length*rh+24,sx=x=>L+(x/mx)*(W-L-10);
+  let g='';
+  for(let c=0;c<=mx;c+=50)g+=`<line x1="${sx(c)}" x2="${sx(c)}" y1="4" y2="${H-18}" stroke="#eee7d8"/><text x="${sx(c)}" y="${H-4}" text-anchor="middle">${c}</text>`;
+  ss.forEach((s,i)=>{const y=i*rh+20;const sp=spacings(s);g+=`<text x="4" y="${y+4}">S${s.Surco}</text>`;
+    sp.forEach((o,j)=>{const x0=j?sp[j-1].p:0;const t=teo||((s.Dist_media)||o.sp);const col=o.sp<0.5*t?'#C68A2E':o.sp>1.5*t?'#c0392b':'#9bb58f';
+      g+=`<line x1="${sx(x0)}" x2="${sx(o.p)}" y1="${y}" y2="${y}" stroke="${col}" stroke-width="${col==='#9bb58f'?3:6}" stroke-linecap="round"><title>${fN(o.sp,1)} cm</title></line>`});
+    sp.forEach(o=>g+=`<circle cx="${sx(o.p)}" cy="${y}" r="5" fill="#1E4A12"><title>${fN(o.p,1)} cm</title></circle>`);
+  });
+  return `<svg class="strip" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMinYMin meet">${g}</svg><div class="hint">Eje en cm desde el inicio del tramo medido.</div>`;
+}
+
+/* ---------- Edición de datos del lote ---------- */
+const EF=[['Fecha','Fecha (d/m/aaaa)'],['Campania','Campaña'],['Tecnico','Técnico'],['Empresa','Empresa'],['Campo','Campo'],['Lote','Lote'],['Cultivo','Cultivo'],['Ambiente','Ambiente'],['Estado_fenologico','Estado fenológico'],['Antecesor','Antecesor'],['Genetica','Genética'],['Contratista','Contratista'],['Sembradora','Sembradora'],['Espaciamiento_cm','Espaciamiento (cm)','n'],['Densidad_siembra','Densidad siembra (pl/ha)','n'],['Latitud','Latitud','n'],['Longitud','Longitud','n'],['Observaciones','Observaciones','t']];
+function editEval(e){
+  const dl=k=>`<datalist id="dl_${k}">${[...new Set(E.map(x=>x[k]).filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
+  document.getElementById('mdlBody').innerHTML=`<h2>Editar · ${esc(e.Empresa)} ${esc(lblF(e))}</h2>
+  <div class="fgrid">${EF.map(([k,l,t])=>t==='t'?`<label style="grid-column:1/-1">${l}<textarea class="inp" rows="2" data-k="${k}">${esc(e[k])}</textarea></label>`:
+    `<label>${l}<input class="inp" data-k="${k}" ${t?'inputmode="decimal"':`list="dl_${k}"`} value="${t?(e[k]===null?'':String(e[k]).replace('.',',')):esc(e[k])}">${t?'':dl(k)}</label>`).join('')}</div>
+  <div class="hint" style="margin-top:10px">Si cambiás espaciamiento o densidad se recalculan plantas/ha, logro, dobles y fallas. Empresa, campo, lote, cultivo, ambiente y fecha también se actualizan en las filas de Surcos.</div>
+  <div class="mact"><button onclick="cerrarMdl()">Cancelar</button><button class="pri" id="mOk">Aplicar</button></div>`;
+  document.getElementById('mdl').classList.add('open');
+  document.getElementById('mOk').onclick=()=>{
+    let recalc=false,shared=false;
+    for(const inp of document.querySelectorAll('#mdlBody [data-k]')){const k=inp.dataset.k;const t=(EF.find(f=>f[0]===k)||[])[2];
+      let v=t==='n'?num(inp.value):inp.value.trim();
+      if(t==='n'&&inp.value.trim()!==''&&v===null){toast(`${k}: valor no numérico`,true);return}
+      if(k==='Fecha'&&v&&!parseFecha(v)){toast('Fecha inválida (usar d/m/aaaa)',true);return}
+      if(v!==e[k]){if(['Espaciamiento_cm','Densidad_siembra'].includes(k))recalc=true;if(SHARED.includes(k))shared=true;e[k]=v;dirtyE.add(e.ID_Evaluacion)}}
+    const ss=surcosDe(e.ID_Evaluacion);
+    if(shared)ss.forEach(s=>{SHARED.forEach(k=>{if(HS.includes(k))s[k]=e[k]});dirtyS.add(e.ID_Evaluacion+'|'+s.Surco)});
+    if(recalc){ss.forEach(s=>{calcSurco(s,e.Espaciamiento_cm,e.Densidad_siembra);dirtyS.add(e.ID_Evaluacion+'|'+s.Surco)});if(ss.length)calcEval(e);else e.Pct_logro=null}
+    marcarUltimas();cerrarMdl();updDirty();render();
+  };
+}
+function cerrarMdl(){document.getElementById('mdl').classList.remove('open')}
+document.getElementById('mdl').onclick=ev=>{if(ev.target.id==='mdl')cerrarMdl()};
+
+/* ---------- Guardar ---------- */
+function updDirty(){
+  const n=dirtyE.size;document.getElementById('dirtyTag').textContent=n?`${n} evaluación(es) con cambios sin guardar`:'';
+  const b=document.getElementById('btnSave');b.disabled=!n;b.title=cfg.script?'':'Configurá la URL del Apps Script para guardar en la planilla';
+}
+function limpio(o,hdr,excl){const r={};hdr.forEach(h=>{if(excl.includes(h)||h.startsWith('_'))return;if(!(h in o))return;const v=o[h];r[h]=v===null||v===undefined?'':v});return r}
+async function guardar(){
+  if(!cfg.script){abrirCfg('Para guardar en la planilla falta configurar la URL del Apps Script.');return}
+  const payload={action:'update',clave:cfg.clave||'',
+    eval:[...dirtyE].map(id=>({id,fields:limpio(byId[id],HE,['ID_Evaluacion','Actualizado','Version_app'])})),
+    surcos:[...dirtyS].map(k=>{const [id,sn]=k.split('|');const s=S.find(x=>x.ID_Evaluacion===id&&String(x.Surco)===sn);return {id,surco:s.Surco,fields:limpio(s,HS,['ID_Evaluacion','Surco'])}})};
+  const b=document.getElementById('btnSave');b.disabled=true;b.textContent='Guardando…';
+  try{
+    const r=await fetch(cfg.script,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    const j=await r.json();if(!j.ok)throw new Error(j.error||'Error');
+    dirtyE.clear();dirtyS.clear();S.forEach(s=>Object.keys(s).filter(k=>k.startsWith('_o')).forEach(k=>delete s[k]));
+    toast(`Guardado: ${j.evalRows} evaluación(es), ${j.surcoRows} surco(s)`+(j.noEncontrados?.length?` · no encontrados: ${j.noEncontrados.length}`:''),!!j.noEncontrados?.length);
+  }catch(err){toast('No se pudo guardar: '+err.message,true)}
+  b.textContent='Guardar cambios';updDirty();render();
+}
+document.getElementById('btnSave').onclick=guardar;
+document.getElementById('btnReload').onclick=()=>{if(dirtyE.size&&!confirm('Hay cambios sin guardar. ¿Recargar igual?'))return;cargar()};
+window.addEventListener('beforeunload',ev=>{if(dirtyE.size){ev.preventDefault();ev.returnValue=''}});
+
+/* ---------- Configuración ---------- */
+function abrirCfg(msg){
+  document.getElementById('mdlBody').innerHTML=`<h2>Configuración</h2>${msg?`<p style="color:var(--bad)">${esc(msg)}</p>`:''}
+  <div class="fgrid" style="grid-template-columns:1fr">
+   <label>URL de la aplicación web de Apps Script (para leer y guardar en la planilla)<input class="inp" id="cScript" value="${esc(cfg.script)}" placeholder="https://script.google.com/macros/s/…/exec"></label>
+   <label>Clave (la misma que pusiste en CLAVE dentro del script; vacío si no usás)<input class="inp" id="cClave" value="${esc(cfg.clave)}"></label>
+   <label>CSV publicado · Evaluaciones (se usa si no hay Apps Script)<input class="inp" id="cE" value="${esc(cfg.csvEval)}"></label>
+   <label>CSV publicado · Surcos<input class="inp" id="cS" value="${esc(cfg.csvSurc)}"></label>
+  </div>
+  <div class="hint" style="margin-top:10px">Sin Apps Script el dashboard funciona en solo lectura con los CSV publicados (Google los actualiza cada ~5 minutos).</div>
+  <div class="mact"><button onclick="cerrarMdl()">Cancelar</button><button class="pri" id="cOk">Guardar y recargar</button></div>`;
+  document.getElementById('mdl').classList.add('open');
+  document.getElementById('cOk').onclick=()=>{cfg.script=document.getElementById('cScript').value.trim();cfg.clave=document.getElementById('cClave').value.trim();cfg.csvEval=document.getElementById('cE').value.trim()||DEF_CFG.csvEval;cfg.csvSurc=document.getElementById('cS').value.trim()||DEF_CFG.csvSurc;saveCfg();cerrarMdl();cargar()};
+}
+document.getElementById('btnCfg').onclick=()=>abrirCfg();
+
+cargar();
+</script>
+</body>
+</html>
