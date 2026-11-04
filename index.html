@@ -88,7 +88,15 @@ select.inp,input.inp,textarea.inp{font-family:inherit;font-size:14px;padding:6px
 /* ================= Informe PDF ================= */
 #informe{display:none}
 @media print{
-  @page{size:A4;margin:11mm 11mm 13mm}
+  @page{size:A4;margin:0}
+  .pgt{width:100%;border-collapse:collapse;break-after:page}
+  .pgt:last-child{break-after:auto}
+  #informe .pgt>thead>tr>td,#informe .pgt>tbody>tr>td,#informe .pgt>tfoot>tr>td{padding:0 12mm;border:none;white-space:normal}
+  .phd{display:flex;align-items:center;justify-content:space-between;padding:8mm 0 2.5mm;margin-bottom:4mm;border-bottom:1px solid #ddd6c6}
+  .phd img{height:30px}
+  .phd span{font-size:8.5pt;color:#6b6f63}
+  .pft{height:11mm}
+  #informe tbody tr:hover{background:transparent!important}
   html,body{background:#fff!important}
   body>*:not(#informe){display:none!important}
   #informe{display:block;font-size:10pt;line-height:1.35;color:#1f2a1a}
@@ -380,7 +388,7 @@ function rTabla(){
 /* ---------- Comparar ---------- */
 const DIMS=[['Lote','Lote'],['LoteAmb','Lote + ambiente'],['Ambiente','Ambiente'],['Empresa','Empresa'],['Campo','Campo'],['Genetica','Genética'],['Antecesor','Antecesor'],['Contratista','Contratista'],['Sembradora','Sembradora'],['Tecnico','Técnico'],['Cultivo','Cultivo'],['Espaciamiento_cm','Espaciamiento']];
 const MET=[['Plantas_ha','Plantas/ha','n'],['Pct_logro','% Logro','p'],['CV','CV distancia','p'],['Uniformidad','Uniformidad','p'],['Pct_dobles','% Dobles','p'],['Pct_fallas','% Fallas','p'],['Desvio','Desvío (cm)','n1'],['Dist_media','Dist. media (cm)','n1']];
-let cmpDim='LoteAmb',cmpMet='Pct_logro';
+let cmpDim='LoteAmb',cmpMet='Pct_logro',cmpOrd='lote';
 function dimVal(e,d){if(d==='LoteAmb')return `${e.Empresa} ${lbl(e)}`;if(d==='Lote')return `${e.Empresa} ${e.Lote}`;const v=e[d];return v===null||v===''?'(vacío)':String(v)}
 function fmtM(v,t){return t==='p'?fP(v):t==='n1'?fN(v,1):fN(v)}
 function rComparar(){
@@ -388,7 +396,7 @@ function rComparar(){
   const g={};d.forEach(e=>{const k=dimVal(e,cmpDim);(g[k]=g[k]||[]).push(e)});
   const met=MET.find(m=>m[0]===cmpMet);
   const rows=Object.entries(g).map(([k,a])=>{const o={k,n:a.length,dens:mean(a.map(e=>e.Densidad_siembra))};MET.forEach(([m])=>o[m]=mean(a.map(e=>e[m])));return o})
-    .sort((a,b)=>cmpDim==='LoteAmb'?a.k.localeCompare(b.k,'es',{numeric:true}):(b[cmpMet]??-1)-(a[cmpMet]??-1));
+    .sort((a,b)=>cmpDim==='LoteAmb'&&cmpOrd==='lote'?a.k.localeCompare(b.k,'es',{numeric:true}):(b[cmpMet]??-1)-(a[cmpMet]??-1));
   // agrupado por lote: una barra por ambiente dentro de cada lote
   const lotes=[...new Set(d.map(e=>`${e.Empresa} ${e.Lote}`))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
   const ambs=[...new Set(d.map(e=>e.Ambiente||'s/amb.'))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
@@ -399,8 +407,9 @@ function rComparar(){
     <select class="inp" style="width:auto" id="cDim">${DIMS.map(([k,l])=>`<option value="${k}" ${k===cmpDim?'selected':''}>${l}</option>`).join('')}</select>
     <span>métrica</span>
     <select class="inp" style="width:auto" id="cMet">${MET.map(([k,l])=>`<option value="${k}" ${k===cmpMet?'selected':''}>${l}</option>`).join('')}</select>
+    ${cmpDim==='LoteAmb'?`<select class="inp" style="width:auto" id="cOrd"><option value="lote" ${cmpOrd==='lote'?'selected':''}>Agrupado por lote</option><option value="valor" ${cmpOrd==='valor'?'selected':''}>Ordenado de mayor a menor</option></select>`:''}
     <span class="sp"></span><span class="hint">Promedio de evaluaciones filtradas</span></h3>
-    <div class="ch" style="height:${Math.max(320,(cmpDim==='LoteAmb'?nPares*26+lotes.length*14:rows.length*30)+80)}px"><canvas id="cc1"></canvas></div></div>
+    <div class="ch" style="height:${Math.max(320,(cmpDim==='LoteAmb'&&cmpOrd==='lote'?nPares*26+lotes.length*14:rows.length*30)+80)}px"><canvas id="cc1"></canvas></div></div>
   <div class="card"><h3>Tabla comparativa</h3><div class="tw"><table><thead><tr><th>${DIMS.find(x=>x[0]===cmpDim)[1]}</th><th class="n">Eval.</th><th class="n">Dens. obj.</th>${MET.map(m=>`<th class="n">${m[1]}</th>`).join('')}</tr></thead><tbody>
    ${rows.map(r=>`<tr><td>${esc(r.k)}</td><td class="n">${r.n}</td><td class="n">${fN(r.dens)}</td>${MET.map(([m,,t])=>`<td class="n">${m==='Pct_logro'?`<span class="dot ${cls(r[m],UMB.logro)}"></span>`:m==='CV'?`<span class="dot ${cls(r[m],UMB.cv,true)}"></span>`:m==='Uniformidad'?`<span class="dot ${cls(r[m],UMB.unif)}"></span>`:''}${fmtM(r[m],t)}</td>`).join('')}</tr>`).join('')}
   </tbody></table></div></div>
@@ -411,13 +420,14 @@ function rComparar(){
   </div>`;
   document.getElementById('cDim').onchange=e=>{cmpDim=e.target.value;render()};
   document.getElementById('cMet').onchange=e=>{cmpMet=e.target.value;render()};
+  const co=document.getElementById('cOrd');if(co)co.onchange=e=>{cmpOrd=e.target.value;render()};
   const c=document.getElementById('clrSel');if(c)c.onclick=()=>{selCmp.clear();render()};
   document.querySelectorAll('tr.click').forEach(tr=>tr.onclick=()=>{detId=tr.dataset.id;tab='detalle';render()});
   const isP=met[2]==='p';
   const val=v=>v===null||v===undefined?null:isP?v*100:v;
   const tip=c=>`${c.dataset.label}: ${isP?fN(c.raw,1)+'%':fN(c.raw,met[2]==='n1'?1:0)}`;
   const xs={x:{beginAtZero:true,ticks:{callback:v=>isP?v+'%':fN(v)}},y:{ticks:{font:{size:14}}}};
-  if(cmpDim==='LoteAmb'){
+  if(cmpDim==='LoteAmb'&&cmpOrd==='lote'){
     const AP=['#1E4A12','#C68A2E','#7FA35B','#8B5E34','#4F7FA8','#B5A27A','#6B4E8C','#A63D2A'];
     const cel=(l,a)=>{const x=d.filter(e=>`${e.Empresa} ${e.Lote}`===l&&(e.Ambiente||'s/amb.')===a);return x.length?{v:mean(x.map(e=>e[cmpMet])),dens:mean(x.map(e=>e.Densidad_siembra))}:null};
     const dsA=ambs.map((a,i)=>{const cs=lotes.map(l=>cel(l,a));return {label:a,data:cs.map(c=>c?val(c.v):null),_dens:cs.map(c=>c&&c.dens),backgroundColor:AP[i%AP.length],skipNull:true,barPercentage:0.9,categoryPercentage:0.85}});
@@ -587,7 +597,6 @@ function generarInforme(d,arr,com,det){
     const ev=d.filter(e=>e.Empresa===emp).sort(ordLA);
     const pend=arr.filter(e=>e.Empresa===emp&&e.Plantas_ha===null);
     const camp=[...new Set(ev.map(e=>e.Campania).filter(Boolean))].join(', ');
-    const tec=[...new Set(ev.map(e=>e.Tecnico).filter(Boolean))].join(', ');
     const cults=[...new Set(ev.map(e=>e.Cultivo).filter(Boolean))].join(' y ');
     const fechas=ev.map(fKey).filter(Boolean);const f0=new Date(Math.min(...fechas)).toLocaleDateString('es-AR'),f1=new Date(Math.max(...fechas)).toLocaleDateString('es-AR');
     const lbls=ev.map(e=>`${e.Lote} · ${e.Ambiente||'s/amb.'}`);
@@ -600,9 +609,9 @@ function generarInforme(d,arr,com,det){
       options:{plugins:{legend:{labels:big},title:{display:true,text:'Dobles y fallas (% de plantas)',font:{size:19}}},scales:{x:{stacked:true,ticks:{font:{size:16},maxRotation:50,minRotation:ev.length>8?40:0}},y:{stacked:true,beginAtZero:true,ticks:{font:{size:16},callback:v=>v+'%'}}}}},1000,ev.length>8?420:360);
     const kp=(l,v)=>`<div><span>${l}</span><b>${v}</b></div>`;
     const dot=(v,u,inv)=>`<span class="dot ${cls(v,u,inv)}"></span>`;
-    html+=`<section class="ip">
-     <div class="rh"><img src="${LOGO}" alt="SOS Agro"><div class="t"><h1>Recuentos de implantación</h1><p><b>${esc(emp)}</b> · ${esc(cults)} · Campaña ${esc(camp)}</p></div>
-      <div class="f">Emitido ${hoy}<br>Recuentos del ${f0}${f0!==f1?' al '+f1:''}${tec?'<br>Relevó: '+esc(tec):''}</div></div>
+    let inner=`<section class="ip">
+     <div class="rh"><div class="t"><h1>Recuentos de implantación</h1><p><b>${esc(emp)}</b> · ${esc(cults)} · Campaña ${esc(camp)}</p></div>
+      <div class="f">Emitido ${hoy}<br>Recuentos del ${f0}${f0!==f1?' al '+f1:''}</div></div>
      ${com?`<div class="com">${esc(com)}</div>`:''}
      <div class="rk">${kp('Evaluaciones',ev.length)}${kp('Plantas/ha',fN(mean(ev.map(e=>e.Plantas_ha))))}${kp('% Logro',fP(mean(ev.map(e=>e.Pct_logro))))}${kp('CV distancia',fP(mean(ev.map(e=>e.CV))))}${kp('% Dobles',fP(mean(ev.map(e=>e.Pct_dobles))))}${kp('% Fallas',fP(mean(ev.map(e=>e.Pct_fallas))))}</div>
      <h2>Resumen por lote y ambiente</h2>
@@ -615,7 +624,7 @@ function generarInforme(d,arr,com,det){
       Semáforo: logro ≥ ${UMB.logro[0]*100}% <span class="dot b-ok"></span> / ≥ ${UMB.logro[1]*100}% <span class="dot b-warn"></span>; CV ≤ ${UMB.cv[0]*100}% <span class="dot b-ok"></span> / ≤ ${UMB.cv[1]*100}% <span class="dot b-warn"></span>; uniformidad ≥ ${UMB.unif[0]*100}% <span class="dot b-ok"></span> / ≥ ${UMB.unif[1]*100}% <span class="dot b-warn"></span>.</div>
     </section>`;
     if(det){
-      html+=`<section class="ip">`+ev.map(e=>{
+      inner+=`<section class="ip">`+ev.map(e=>{
         const ss=surcosDe(e.ID_Evaluacion);const teo=e.Espaciamiento_cm&&e.Densidad_siembra?1e8/(e.Espaciamiento_cm*e.Densidad_siembra):null;
         return `<div class="ev"><h3>${esc(e.Campo)} · ${esc(e.Lote)} · ${esc(e.Ambiente||'s/amb.')}</h3>
         <div class="meta">${esc(e.Cultivo)}${e.Genetica?' '+esc(e.Genetica):''} · ${esc(e.Fecha)}${e.Estado_fenologico?' · '+esc(e.Estado_fenologico):''} · antecesor ${esc(e.Antecesor||'–')} · ${esc(e.Contratista||'–')}${e.Sembradora?' ('+esc(e.Sembradora)+')':''} · surcos a ${fN(e.Espaciamiento_cm,1)} cm · objetivo ${fN(e.Densidad_siembra)} pl/ha${teo?` (distancia teórica ${fN(teo,1)} cm)`:''}</div>
@@ -624,6 +633,9 @@ function generarInforme(d,arr,com,det){
         ${ss.length?`<table style="margin-top:4px"><thead><tr><th>Surco</th><th class="n">Pl/ha</th><th class="n">Dist. media</th><th class="n">Desvío</th><th class="n">CV</th><th class="n">Dobles</th><th class="n">Fallas</th><th class="n">Unif.</th></tr></thead><tbody>${ss.map(s=>`<tr><td>${s.Surco}</td><td class="n">${fN(s.Plantas_ha)}</td><td class="n">${fN(s.Dist_media,1)} cm</td><td class="n">${fN(s.Desvio,1)} cm</td><td class="n">${fP(s.CV)}</td><td class="n">${fP(s.Pct_dobles)}</td><td class="n">${fP(s.Pct_fallas)}</td><td class="n">${fP(s.Uniformidad)}</td></tr>`).join('')}</tbody></table>`:''}
         ${e.Observaciones?`<div class="obs"><b>Observaciones:</b> ${esc(e.Observaciones)}</div>`:''}</div>`}).join('')+`</section>`;
     }
+    // la cabecera (logo) y el margen inferior se repiten en todas las hojas
+    html+=`<table class="pgt"><thead><tr><td><div class="phd"><img src="${LOGO}" alt="SOS Agro"><span>${esc(emp)} · Campaña ${esc(camp)}</span></div></td></tr></thead>
+     <tfoot><tr><td><div class="pft"></div></td></tr></tfoot><tbody><tr><td>${inner}</td></tr></tbody></table>`;
   }
   const box=document.getElementById('informe');box.innerHTML=html;
   const t0=document.title;document.title=`Recuentos_${emps.length===1?emps[0]:'varias'}_${hoy.replace(/\//g,'-')}`;
